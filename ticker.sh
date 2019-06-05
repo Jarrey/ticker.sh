@@ -16,8 +16,9 @@ if [ -z "$SYMBOLS" ]; then
   exit
 fi
 
-FIELDS=(symbol exchange currency marketState ask bid regularMarketPrice regularMarketChange regularMarketChangePercent \
-  preMarketPrice preMarketChange preMarketChangePercent postMarketPrice postMarketChange postMarketChangePercent shortName longName)
+FIELDS=(symbol quoteType exchange currency marketState ask bid regularMarketPrice regularMarketChange regularMarketChangePercent \
+  preMarketPrice preMarketChange preMarketChangePercent postMarketPrice postMarketChange postMarketChangePercent shortName longName \
+  regularMarketOpen regularMarketDayHigh regularMarketDayLow regularMarketVolume regularMarketDayRange)
 API_ENDPOINT="https://query1.finance.yahoo.com/v7/finance/quote?lang=en-US&region=US&corsDomain=finance.yahoo.com"
 
 if [ -z "$NO_COLOR" ]; then
@@ -37,14 +38,16 @@ query () {
   echo $results | jq -r ".[] | select(.symbol == \"$1\") | .$2"
 }
 
-printf "%-32s%-10s%-20s%-11s%-14s%-16s%-12s%-10s%s\n" "Name" "Exchange" "Symbol" "Price" "Change" "Percent" "Ask" "Bid" "Currency"
-printf "%0.s-" {1..133}
+printf "%-32s%-10s%-10s%-20s%-11s%-14s%-16s%-12s%-10s%-16s" "Name" "Type" "Exchange" "Symbol" "Price" "Change" "Percent" "Ask" "Bid" "Currency"
+printf "%-12s%-13s%-24s%-11s%s\n" "Open" "High" "Low" "Range" "Volume"
+printf "%0.s-" {1..217}
 printf "\n"
 for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
   marketState="$(query $symbol 'marketState')"
   shortName="$(query $symbol 'shortName')"
   exchange="$(query $symbol 'exchange')"
   currency="$(query $symbol 'currency')"
+  quoteType="$(query $symbol 'quoteType')"
 
   if [ -z $marketState ]; then
     printf 'No results for symbol "%s"\n' $symbol
@@ -53,6 +56,11 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
 
   preMarketChange="$(query $symbol 'preMarketChange')"
   postMarketChange="$(query $symbol 'postMarketChange')"
+  volume=0
+  dayHigh=0.0
+  dayLow=0.0
+  open=0.0
+  range="-"
 
   if [ $marketState == "PRE" ] \
     && [ $preMarketChange != "0" ] \
@@ -73,6 +81,11 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
     price=$(query $symbol 'regularMarketPrice')
     diff=$(query $symbol 'regularMarketChange')
     percent=$(query $symbol 'regularMarketChangePercent')
+    open=$(query $symbol 'regularMarketOpen')
+    dayHigh=$(query $symbol 'regularMarketDayHigh')
+    dayLow=$(query $symbol 'regularMarketDayLow')
+    volume=$(query $symbol 'regularMarketVolume')
+    range="$(query $symbol 'regularMarketDayRange')"
   fi
 
   ask=$(query $symbol 'ask')
@@ -87,7 +100,8 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
   fi
 
   printf "%-32s" "$shortName"
-  printf "%-10s%-15s$COLOR_BOLD%10.4f$COLOR_RESET" $exchange $symbol $price
+  printf "%-10s%-10s%-15s$COLOR_BOLD%10.4f$COLOR_RESET" $quoteType $exchange $symbol $price
   printf "$color%12.4f%15s%12.4f%12.4f$COLOR_RESET%10s" $diff $(printf "(%.4f%%)" $percent) $ask $bid $currency
+  printf "$color%17.4f%12.4f%12.4f%26s%12.0f$COLOR_RESET" $open $dayHigh $dayLow "$range" $volume
   printf " %s\n" "$nonRegularMarketSign"
 done
