@@ -105,3 +105,7 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
   printf "$color%17.4f%12.4f%12.4f%26s%12.0f$COLOR_RESET" $open $dayHigh $dayLow "$range" $volume
   printf " %s\n" "$nonRegularMarketSign"
 done
+printf "%0.s-" {1..217}
+printf "\n"
+printf "%0.s " {1..176}
+echo "Last Update: $(date)"
