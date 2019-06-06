@@ -39,8 +39,8 @@ query () {
 }
 
 printf "%-32s%-10s%-10s%-20s%-11s%-14s%-16s%-12s%-10s%-16s" "Name" "Type" "Exchange" "Symbol" "Price" "Change" "Percent" "Ask" "Bid" "Currency"
-printf "%-12s%-13s%-24s%-11s%s\n" "Open" "High" "Low" "Range" "Volume"
-printf "%0.s-" {1..217}
+printf "%-12s%-13s%-24s%-11s%-10s\t%s\n" "Open" "High" "Low" "Range" "Volume" "State"
+printf "%0.s-" {1..235}
 printf "\n"
 for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
   marketState="$(query $symbol 'marketState')"
@@ -56,11 +56,13 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
 
   preMarketChange="$(query $symbol 'preMarketChange')"
   postMarketChange="$(query $symbol 'postMarketChange')"
-  volume=0
-  dayHigh=0.0
-  dayLow=0.0
-  open=0.0
-  range="-"
+  ask=$(query $symbol 'ask')
+  bid=$(query $symbol 'bid')
+  open=$(query $symbol 'regularMarketOpen')
+  dayHigh=$(query $symbol 'regularMarketDayHigh')
+  dayLow=$(query $symbol 'regularMarketDayLow')
+  volume=$(query $symbol 'regularMarketVolume')
+  range="$(query $symbol 'regularMarketDayRange')"
 
   if [ $marketState == "PRE" ] \
     && [ $preMarketChange != "0" ] \
@@ -81,15 +83,7 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
     price=$(query $symbol 'regularMarketPrice')
     diff=$(query $symbol 'regularMarketChange')
     percent=$(query $symbol 'regularMarketChangePercent')
-    open=$(query $symbol 'regularMarketOpen')
-    dayHigh=$(query $symbol 'regularMarketDayHigh')
-    dayLow=$(query $symbol 'regularMarketDayLow')
-    volume=$(query $symbol 'regularMarketVolume')
-    range="$(query $symbol 'regularMarketDayRange')"
   fi
-
-  ask=$(query $symbol 'ask')
-  bid=$(query $symbol 'bid')
 
   if [ "$diff" == "0" ]; then
     color=
@@ -101,11 +95,11 @@ for symbol in $(IFS=' '; echo "${SYMBOLS[*]}"); do
 
   printf "%-32s" "$shortName"
   printf "%-10s%-10s%-15s$COLOR_BOLD%10.4f$COLOR_RESET" $quoteType $exchange $symbol $price
-  printf "$color%12.4f%15s%12.4f%12.4f$COLOR_RESET%10s" $diff $(printf "(%.4f%%)" $percent) $ask $bid $currency
-  printf "$color%17.4f%12.4f%12.4f%26s%12.0f$COLOR_RESET" $open $dayHigh $dayLow "$range" $volume
+  printf "$color%12.4f%15s%12.4f%12.4f$COLOR_RESET%10s" $diff $(printf "%.4f%%" $percent) $ask $bid $currency
+  printf "$color%17.4f%12.4f%12.4f%26s%12.0f$COLOR_RESET\t%s" $open $dayHigh $dayLow "$range" $volume $marketState
   printf " %s\n" "$nonRegularMarketSign"
 done
-printf "%0.s-" {1..217}
+printf "%0.s-" {1..235}
 printf "\n"
-printf "%0.s " {1..176}
+printf "%0.s " {1..194}
 echo "Last Update: $(date)"
